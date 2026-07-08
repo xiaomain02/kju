@@ -12,6 +12,7 @@ class User(Base):
     password_hash = Column(String(255), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    version = Column(Integer, default=1)
     
     # Relationships
     owned_boards = relationship("Board", back_populates="owner")
@@ -29,6 +30,7 @@ class Board(Base):
     owner_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    version = Column(Integer, default=1)
     
     # Relationships
     owner = relationship("User", back_populates="owned_boards")
@@ -56,6 +58,7 @@ class Column(Base):
     position = Column(Integer, default=0)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    version = Column(Integer, default=1)
     
     # Relationships
     board = relationship("Board", back_populates="columns")
@@ -67,7 +70,7 @@ class Card(Base):
     id = Column(Integer, primary_key=True, index=True)
     column_id = Column(Integer, ForeignKey("columns.id", ondelete="CASCADE"), nullable=False)
     title = Column(String(200), nullable=False)
-    description = Column(Text)
+    #description = Column(Text)
     position = Column(Integer, default=0)
     assignee_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     deadline = Column(Date, nullable=True)
@@ -75,6 +78,7 @@ class Card(Base):
     created_by = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    version = Column(Integer, default=1)
     
     # Relationships
     column = relationship("Column", back_populates="cards")
@@ -91,6 +95,7 @@ class Comment(Base):
     content = Column(Text, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    version = Column(Integer, default=1)
     
     # Relationships
     card = relationship("Card", back_populates="comments")
