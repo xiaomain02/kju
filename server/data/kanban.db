@@ -1,0 +1,165 @@
+CREATE TABLE IF NOT EXISTS users(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username VARCHAR(50) UNIQUE NOT NULL,
+        email VARCHAR(100) UNIQUE NOT NULL CHECK (email LIKE('%_@_%._%')),
+        password_hash VARCHAR(255) NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        version INTEGER DEFAULT 1
+        );
+
+CREATE TABLE IF NOT EXISTS boards (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title VARCHAR(100) NOT NULL,
+        owner_id INTEGER NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        version INTEGER DEFAULT 1,
+        FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS board_members (
+        board_id INTEGER NOT NULL,
+        user_id INTEGER NOT NULL,
+        role VARCHAR(20) DEFAULT 'member',
+        joined_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (board_id, user_id),
+        FOREIGN KEY (board_id) REFERENCES boards(id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        version INTEGER DEFAULT 1
+
+);
+
+CREATE TABLE IF NOT EXISTS columns (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        board_id INTEGER NOT NULL,
+        title VARCHAR(100) NOT NULL,
+        position INTEGER DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        version INTEGER DEFAULT 1,
+        FOREIGN KEY (board_id) REFERENCES boards(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS cards(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        column_id INTEGER NOT NULL,
+        title VARCHAR(200) NOT NULL,
+        description TEXT,
+        position INTEGER DEFAULT 0,
+        assignee_id INTEGER,
+        deadline DATE,
+        priority VARCHAR(20) DEFAULT 'medium' CHECK(priority IN ('low', 'medium', 'high')),
+        created_by INTEGER NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        is_archived BOOLEAN DEFAULT 0,
+        archived_at DATETIME,
+        archived_by INTEGER,
+        version INTEGER DEFAULT 1,
+        FOREIGN KEY (column_id) REFERENCES columns(id) ON DELETE CASCADE,
+        FOREIGN KEY (assignee_id) REFERENCES users(id) ON DELETE SET NULL,
+        FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (archived_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+
+CREATE TABLE IF NOT EXISTS comments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    card_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
+    content TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    version INTEGER DEFAULT 1,
+    FOREIGN KEY (card_id) REFERENCES cards(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+
+CREATE INDEX IF NOT EXISTS idx_cards_column_id ON cards(column_id);
+CREATE INDEX IF NOT EXISTS idx_cards_assignee_id ON cards(assignee_id);
+CREATE INDEX IF NOT EXISTS idx_cards_deadline ON cards(deadline);
+CREATE INDEX IF NOT EXISTS idx_cards_priority ON cards(priority);
+CREATE INDEX IF NOT EXISTS idx_cards_archived ON cards(is_archived);
+CREATE INDEX IF NOT EXISTS idx_comments_card_id ON comments(card_id);
+CREATE INDEX IF NOT EXISTS idx_board_members_user_id ON board_members(user_id);
+
+CREATE INDEX IF NOT EXISTS idx_users_version ON users(version);
+CREATE INDEX IF NOT EXISTS idx_boards_version ON boards(version);
+CREATE INDEX IF NOT EXISTS idx_board_members_version ON board_members(version);
+CREATE INDEX IF NOT EXISTS idx_columns_version ON columns(version);
+CREATE INDEX IF NOT EXISTS idx_cards_version ON cards(version);
+CREATE INDEX IF NOT EXISTS idx_comments_version ON comments(version);
+
+
+CREATE TRIGGER IF NOT EXISTS update_users_updated_at
+AFTER UPDATE ON users
+BEGIN
+    UPDATE users SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+END;
+
+CREATE TRIGGER IF NOT EXISTS update_boards_updated_at
+AFTER UPDATE ON boards
+BEGIN
+    UPDATE boards SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+END;
+
+CREATE TRIGGER IF NOT EXISTS update_columns_updated_at
+AFTER UPDATE ON columns
+BEGIN
+    UPDATE columns SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+END;
+
+CREATE TRIGGER IF NOT EXISTS update_cards_updated_at
+AFTER UPDATE ON cards
+BEGIN
+    UPDATE cards SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+END;
+
+CREATE TRIGGER IF NOT EXISTS update_comments_updated_at
+AFTER UPDATE ON comments
+BEGIN
+    UPDATE comments SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+END;
+
+
+
+
+CREATE TRIGGER IF NOT EXISTS update_users_version
+AFTER UPDATE ON users
+BEGIN
+    UPDATE users SET version = version + 1 WHERE id = NEW.id;
+END;
+
+CREATE TRIGGER IF NOT EXISTS update_boards_version
+AFTER UPDATE ON boards
+BEGIN
+    UPDATE boards SET version = version + 1 WHERE id = NEW.id;
+END;
+
+CREATE TRIGGER IF NOT EXISTS update_board_members_version
+AFTER UPDATE ON board_members
+BEGIN
+    UPDATE board_members
+    SET version = version + 1
+    WHERE board_id = NEW.board_id AND user_id = NEW.user_id;
+END;
+
+CREATE TRIGGER IF NOT EXISTS update_columns_version
+AFTER UPDATE ON columns
+BEGIN
+    UPDATE columns SET version = version + 1 WHERE id = NEW.id;
+END;
+
+CREATE TRIGGER IF NOT EXISTS update_cards_version
+AFTER UPDATE ON cards
+BEGIN
+    UPDATE cards SET version = version + 1 WHERE id = NEW.id;
+END;
+
+CREATE TRIGGER IF NOT EXISTS update_comments_version
+AFTER UPDATE ON comments
+BEGIN
+    UPDATE comments SET version = version + 1 WHERE id = NEW.id;
+END;
