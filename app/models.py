@@ -3,6 +3,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.database import Base
 
+
 class User(Base):
     __tablename__ = "users"
     
@@ -14,12 +15,12 @@ class User(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     version = Column(Integer, default=1)
     
-    # Relationships
     owned_boards = relationship("Board", back_populates="owner")
     board_memberships = relationship("BoardMember", back_populates="user")
     comments = relationship("Comment", back_populates="user")
     created_cards = relationship("Card", foreign_keys="Card.created_by", back_populates="creator")
     assigned_cards = relationship("Card", foreign_keys="Card.assignee_id", back_populates="assignee")
+
 
 class Board(Base):
     __tablename__ = "boards"
@@ -31,10 +32,10 @@ class Board(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     version = Column(Integer, default=1)
     
-    # Relationships
     owner = relationship("User", back_populates="owned_boards")
     members = relationship("BoardMember", back_populates="board", cascade="all, delete-orphan")
-    columns = relationship("Column", back_populates="board", cascade="all, delete-orphan")
+    columns = relationship("BoardColumn", back_populates="board", cascade="all, delete-orphan")
+
 
 class BoardMember(Base):
     __tablename__ = "board_members"
@@ -44,11 +45,11 @@ class BoardMember(Base):
     role = Column(String(20), default="reader")
     joined_at = Column(DateTime(timezone=True), server_default=func.now())
     
-    # Relationships
     board = relationship("Board", back_populates="members")
     user = relationship("User", back_populates="board_memberships")
 
-class Column(Base):
+
+class BoardColumn(Base):
     __tablename__ = "columns"
     
     id = Column(Integer, primary_key=True, index=True)
@@ -59,9 +60,9 @@ class Column(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     version = Column(Integer, default=1)
     
-    # Relationships
     board = relationship("Board", back_populates="columns")
     cards = relationship("Card", back_populates="column", cascade="all, delete-orphan")
+
 
 class Card(Base):
     __tablename__ = "cards"
@@ -79,11 +80,11 @@ class Card(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     version = Column(Integer, default=1)
     
-    # Relationships
-    column = relationship("Column", back_populates="cards")
+    column = relationship("BoardColumn", back_populates="cards")
     creator = relationship("User", foreign_keys=[created_by], back_populates="created_cards")
     assignee = relationship("User", foreign_keys=[assignee_id], back_populates="assigned_cards")
     comments = relationship("Comment", back_populates="card", cascade="all, delete-orphan")
+
 
 class Comment(Base):
     __tablename__ = "comments"
@@ -96,6 +97,5 @@ class Comment(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     version = Column(Integer, default=1)
     
-    # Relationships
     card = relationship("Card", back_populates="comments")
     user = relationship("User", back_populates="comments")

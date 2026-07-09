@@ -8,13 +8,12 @@ Base.metadata.create_all(bind=engine)
 app = FastAPI(
     title="Kanban Board API",
     description="API для управления канбан-доской",
-    version="1.0.0"
+    version="2.0.0"
 )
 
-# CORS для фронтенда
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # потом заменим на конкретные домены
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
