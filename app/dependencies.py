@@ -1,13 +1,17 @@
-from fastapi import HTTPException, status, Depends
+from typing import Optional
+from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
-from app.database import get_db
 from app.models import User, Board, BoardMember, Card, Column, Comment
+from app.schemas import BoardRole
+from datetime import date
+
 
 def is_board_owner(board_id: int, user_id: int, db: Session) -> bool:
     board = db.query(Board).filter(Board.id == board_id).first()
     if not board:
         return False
     return board.owner_id == user_id
+
 
 def is_board_member(board_id: int, user_id: int, db: Session) -> bool:
     member = db.query(BoardMember).filter(
@@ -16,13 +20,37 @@ def is_board_member(board_id: int, user_id: int, db: Session) -> bool:
     ).first()
     return member is not None
 
-def check_board_access(board_id: int, user_id: int, db: Session) -> bool:
-    """Проверяет, имеет ли пользователь доступ к доске (владелец или участник)"""
+
+def get_user_role(board_id: int, user_id: int, db: Session) -> Optional[str]:
+    board = db.query(Board).filter(Board.id == board_id).first()
+    if board and board.owner_id == user_id:
+        return BoardRole.OWNER
+    
+    member = db.query(BoardMember).filter(
+        BoardMember.board_id == board_id,
+        BoardMember.user_id == user_id
+    ).first()
+    
+    if member:
+        return member.role
+    
+    return None
+
+
+def can_read_board(board_id: int, user_id: int, db: Session) -> bool:
     if is_board_owner(board_id, user_id, db):
         return True
     return is_board_member(board_id, user_id, db)
 
-def can_edit_card(card_id: int, user_id: int, db: Session) -> bool:
+
+def can_create_cards(board_id: int, user_id: int, db: Session) -> bool:
+    role = get_user_role(board_id, user_id, db)
+    if role is None:
+        return False
+    return role in [BoardRole.MEMBER, BoardRole.OWNER]
+
+
+def can_edit_own_cards(card_id: int, user_id: int, db: Session) -> bool:
     card = db.query(Card).filter(Card.id == card_id).first()
     if not card:
         return False
@@ -31,18 +59,15 @@ def can_edit_card(card_id: int, user_id: int, db: Session) -> bool:
     if not board:
         return False
     
-    # Owner может всё
     if board.owner_id == user_id:
         return True
     
-    # Member может редактировать только свои карточки
-    return card.created_by == user_id
+    role = get_user_role(board.id, user_id, db)
+    if role == BoardRole.MEMBER:
+        return card.created_by == user_id
+    
+    return False
 
-def can_delete_card(card_id: int, user_id: int, db: Session) -> bool:
-    return can_edit_card(card_id, user_id, db)
-
-def can_move_card(card_id: int, user_id: int, db: Session) -> bool:
-    return can_edit_card(card_id, user_id, db)
 
 def can_delete_comment(comment_id: int, user_id: int, db: Session) -> bool:
     comment = db.query(Comment).filter(Comment.id == comment_id).first()
@@ -57,16 +82,42 @@ def can_delete_comment(comment_id: int, user_id: int, db: Session) -> bool:
     if not board:
         return False
     
-    # Owner может удалить любой комментарий
     if board.owner_id == user_id:
         return True
     
-    # Member может удалить только свой
-    return comment.user_id == user_id
+    role = get_user_role(board.id, user_id, db)
+    if role == BoardRole.MEMBER:
+        return comment.user_id == user_id
+    
+    return False
+
+
+def can_manage_columns(board_id: int, user_id: int, db: Session) -> bool:
+    return is_board_owner(board_id, user_id, db)
+
+
+def can_manage_members(board_id: int, user_id: int, db: Session) -> bool:
+    return is_board_owner(board_id, user_id, db)
+
+
+def can_delete_board(board_id: int, user_id: int, db: Session) -> bool:
+    return is_board_owner(board_id, user_id, db)
+
 
 def is_overdue(deadline) -> bool:
-    """Проверяет, просрочен ли дедлайн"""
     if not deadline:
         return False
-    from datetime import date
     return date.today() > deadline
+
+
+# Legacy compatibility
+def can_edit_card(card_id: int, user_id: int, db: Session) -> bool:
+    return can_edit_own_cards(card_id, user_id, db)
+
+
+def can_delete_card(card_id: int, user_id: int, db: Session) -> bool:
+    return can_edit_own_cards(card_id, user_id, db)
+
+
+def can_move_card(card_id: int, user_id: int, db: Session) -> bool:
+    return can_edit_own_cards(card_id, user_id, db)

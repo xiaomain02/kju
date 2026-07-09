@@ -9,48 +9,43 @@ from enum import Enum
 # ============================================
 
 class Priority(str, Enum):
-    """Приоритет карточки"""
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
 
 
 class BoardRole(str, Enum):
-    """Роль участника доски"""
-    OWNER = "owner"
+    READER = "reader"
     MEMBER = "member"
+    OWNER = "owner"
 
 
 # ============================================
-# AUTH (Аутентификация)
+# AUTH
 # ============================================
 
 class UserCreate(BaseModel):
-    """Регистрация нового пользователя"""
-    username: str = Field(..., min_length=3, max_length=50, description="Имя пользователя")
-    email: EmailStr = Field(..., description="Email")
-    password: str = Field(..., min_length=6, description="Пароль (минимум 6 символов)")
+    username: str = Field(..., min_length=3, max_length=50)
+    email: EmailStr
+    password: str = Field(..., min_length=6)
 
 
 class UserLogin(BaseModel):
-    """Вход в систему"""
-    email: EmailStr = Field(..., description="Email")
-    password: str = Field(..., description="Пароль")
+    email: EmailStr
+    password: str
 
 
 class Token(BaseModel):
-    """JWT токен"""
     access_token: str
     token_type: str = "bearer"
     user: "UserResponse"
 
 
 # ============================================
-# USERS (Пользователи)
+# USERS
 # ============================================
 
 class UserResponse(BaseModel):
-    """Ответ с данными пользователя"""
     id: int
     username: str
     email: str
@@ -62,24 +57,25 @@ class UserResponse(BaseModel):
 
 
 class UserUpdate(BaseModel):
-    """Обновление профиля пользователя"""
-    username: Optional[str] = Field(None, min_length=3, max_length=50, description="Новое имя пользователя")
-    email: Optional[EmailStr] = Field(None, description="Новый email")
-    password: Optional[str] = Field(None, min_length=6, description="Новый пароль")
-    version: int = Field(..., description="Текущая версия пользователя (для предотвращения коллизий)")
+    username: Optional[str] = Field(None, min_length=3, max_length=50)
+    email: Optional[EmailStr] = None
+    password: Optional[str] = Field(None, min_length=6)
+    version: int
 
 
 # ============================================
-# BOARD MEMBERS (Участники доски)
+# BOARD MEMBERS
 # ============================================
 
 class MemberAdd(BaseModel):
-    """Добавление участника в доску"""
-    email: EmailStr = Field(..., description="Email пользователя, которого нужно добавить")
+    email: EmailStr
+
+
+class MemberRoleUpdate(BaseModel):
+    role: BoardRole
 
 
 class BoardMemberResponse(BaseModel):
-    """Ответ с данными участника доски"""
     user_id: int
     username: str
     email: str
@@ -90,27 +86,21 @@ class BoardMemberResponse(BaseModel):
 
 
 # ============================================
-# BOARDS (Доски)
+# BOARDS
 # ============================================
 
 class BoardCreate(BaseModel):
-    """Создание новой доски"""
-    title: str = Field(..., min_length=1, max_length=100, description="Название доски")
-    #description: Optional[str] = Field(None, description="Описание доски")
+    title: str = Field(..., min_length=1, max_length=100)
 
 
 class BoardUpdate(BaseModel):
-    """Обновление доски"""
-    title: Optional[str] = Field(None, min_length=1, max_length=100, description="Новое название доски")
-    #description: Optional[str] = Field(None, description="Новое описание доски")
-    version: int = Field(..., description="Текущая версия доски (для предотвращения коллизий)")
+    title: Optional[str] = Field(None, min_length=1, max_length=100)
+    version: int
 
 
 class BoardResponse(BaseModel):
-    """Ответ с данными доски (базовый)"""
     id: int
     title: str
-    #description: Optional[str] = None
     owner_id: int
     created_at: datetime
     updated_at: Optional[datetime] = None
@@ -120,29 +110,25 @@ class BoardResponse(BaseModel):
 
 
 class BoardDetailResponse(BoardResponse):
-    """Ответ с данными доски (с участниками)"""
     members: List[BoardMemberResponse] = []
 
 
 # ============================================
-# COLUMNS (Колонки)
+# COLUMNS
 # ============================================
 
 class ColumnCreate(BaseModel):
-    """Создание новой колонки"""
-    title: str = Field(..., min_length=1, max_length=100, description="Название колонки")
-    position: Optional[int] = Field(0, description="Позиция колонки (порядок)")
+    title: str = Field(..., min_length=1, max_length=100)
+    position: Optional[int] = 0
 
 
 class ColumnUpdate(BaseModel):
-    """Обновление колонки"""
-    title: Optional[str] = Field(None, min_length=1, max_length=100, description="Новое название колонки")
-    position: Optional[int] = Field(None, description="Новая позиция колонки")
-    version: int = Field(..., description="Текущая версия колонки (для предотвращения коллизий)")
+    title: Optional[str] = Field(None, min_length=1, max_length=100)
+    position: Optional[int] = None
+    version: int
 
 
 class ColumnResponse(BaseModel):
-    """Ответ с данными колонки"""
     id: int
     board_id: int
     title: str
@@ -155,41 +141,36 @@ class ColumnResponse(BaseModel):
 
 
 class ColumnDetailResponse(ColumnResponse):
-    """Ответ с данными колонки (с карточками)"""
     cards: List["CardResponse"] = []
 
 
 # ============================================
-# CARDS (Карточки)
+# CARDS
 # ============================================
 
 class CardCreate(BaseModel):
-    """Создание новой карточки"""
-    title: str = Field(..., min_length=1, max_length=200, description="Заголовок карточки")
-    description: Optional[str] = Field(None, description="Описание карточки")
-    assignee_id: Optional[int] = Field(None, description="ID исполнителя (пользователя)")
-    deadline: Optional[date] = Field(None, description="Дедлайн (только дата)")
-    priority: Priority = Field(Priority.MEDIUM, description="Приоритет: low, medium, high")
+    title: str = Field(..., min_length=1, max_length=200)
+    description: Optional[str] = None
+    assignee_id: Optional[int] = None
+    deadline: Optional[date] = None
+    priority: Priority = Priority.MEDIUM
 
 
 class CardUpdate(BaseModel):
-    """Обновление карточки"""
-    title: Optional[str] = Field(None, min_length=1, max_length=200, description="Новый заголовок")
-    description: Optional[str] = Field(None, description="Новое описание")
-    assignee_id: Optional[int] = Field(None, description="Новый исполнитель")
-    deadline: Optional[date] = Field(None, description="Новый дедлайн")
-    priority: Optional[Priority] = Field(None, description="Новый приоритет")
-    version: int = Field(..., description="Текущая версия карточки (для предотвращения коллизий)")
+    title: Optional[str] = Field(None, min_length=1, max_length=200)
+    description: Optional[str] = None
+    assignee_id: Optional[int] = None
+    deadline: Optional[date] = None
+    priority: Optional[Priority] = None
+    version: int
 
 
 class CardMove(BaseModel):
-    """Перемещение карточки между колонками"""
-    target_column_id: int = Field(..., description="ID колонки, куда перемещаем")
-    position: int = Field(..., ge=0, description="Новая позиция в колонке")
+    target_column_id: int
+    position: int = Field(..., ge=0)
 
 
 class CardResponse(BaseModel):
-    """Ответ с данными карточки"""
     id: int
     column_id: int
     title: str
@@ -210,22 +191,19 @@ class CardResponse(BaseModel):
 
 
 # ============================================
-# COMMENTS (Комментарии)
+# COMMENTS
 # ============================================
 
 class CommentCreate(BaseModel):
-    """Создание комментария"""
-    content: str = Field(..., min_length=1, description="Текст комментария")
+    content: str = Field(..., min_length=1)
 
 
 class CommentUpdate(BaseModel):
-    """Обновление комментария"""
-    content: str = Field(..., min_length=1, description="Новый текст комментария")
-    version: int = Field(..., description="Текущая версия комментария (для предотвращения коллизий)")
+    content: str = Field(..., min_length=1)
+    version: int
 
 
 class CommentResponse(BaseModel):
-    """Ответ с данными комментария"""
     id: int
     card_id: int
     user_id: int
@@ -239,10 +217,9 @@ class CommentResponse(BaseModel):
 
 
 # ============================================
-# FORWARD DECLARATIONS (для циклических ссылок)
+# FORWARD DECLARATIONS
 # ============================================
 
-# Обновляем модели, которые ссылаются друг на друга
 BoardDetailResponse.model_rebuild()
 ColumnDetailResponse.model_rebuild()
 CardResponse.model_rebuild()

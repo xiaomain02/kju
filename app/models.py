@@ -26,7 +26,6 @@ class Board(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String(100), nullable=False)
-    description = Column(Text)
     owner_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
@@ -42,7 +41,7 @@ class BoardMember(Base):
     
     board_id = Column(Integer, ForeignKey("boards.id", ondelete="CASCADE"), primary_key=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
-    role = Column(String(20), default="member")  # 'owner' or 'member'
+    role = Column(String(20), default="reader")
     joined_at = Column(DateTime(timezone=True), server_default=func.now())
     
     # Relationships
@@ -70,7 +69,7 @@ class Card(Base):
     id = Column(Integer, primary_key=True, index=True)
     column_id = Column(Integer, ForeignKey("columns.id", ondelete="CASCADE"), nullable=False)
     title = Column(String(200), nullable=False)
-    #description = Column(Text)
+    description = Column(Text)
     position = Column(Integer, default=0)
     assignee_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     deadline = Column(Date, nullable=True)
