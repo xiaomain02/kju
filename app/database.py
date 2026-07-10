@@ -1,16 +1,36 @@
 import os
+import tempfile
+from pathlib import Path
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.pool import NullPool
 
 from app.models import Base
 
-DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
-DB_PATH = os.path.join(DATA_DIR, 'kanban.db')
+def get_default_data_dir() -> Path:
+    custom_dir = os.environ.get('KJU_DATA_DIR')
+    if custom_dir:
+        return Path(custom_dir).expanduser()
 
-os.makedirs(DATA_DIR, exist_ok=True)
+    if os.name == 'nt':
+        base_dir = os.environ.get('LOCALAPPDATA') or tempfile.gettempdir()
+        return Path(base_dir) / 'KJU'
 
-DATABASE_URL = os.environ.get('DATABASE_URL', f'sqlite:///{DB_PATH}')
+    base_dir = os.environ.get('XDG_DATA_HOME') or Path.home() / '.local' / 'share'
+    return Path(base_dir) / 'kju'
+
+
+DATA_DIR = get_default_data_dir()
+DB_PATH = DATA_DIR / 'kanban.db'
+
+try:
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+except OSError:
+    DATA_DIR = Path(tempfile.gettempdir()) / 'KJU'
+    DB_PATH = DATA_DIR / 'kanban.db'
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+
+DATABASE_URL = os.environ.get('DATABASE_URL') or f'sqlite:///{DB_PATH.as_posix()}'
 
 engine = create_engine(
     DATABASE_URL,
@@ -31,7 +51,7 @@ def get_db() -> Session:
 
 def init_db():
     Base.metadata.create_all(bind=engine)
-    print(f"База данных создана: {DB_PATH}")
+    print(f"Database is ready: {DB_PATH}")
 
 
 def get_connection():    return engine.connect()

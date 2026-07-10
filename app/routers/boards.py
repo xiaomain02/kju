@@ -85,9 +85,15 @@ async def get_board(
             "joined_at": member.joined_at
         })
     
-    result = BoardDetailResponse.model_validate(board)
-    result.members = member_responses
-    return result
+    return BoardDetailResponse(
+        id=board.id,
+        title=board.title,
+        owner_id=board.owner_id,
+        created_at=board.created_at,
+        updated_at=board.updated_at,
+        version=board.version,
+        members=member_responses
+    )
 
 @router.put("/{board_id}", response_model=BoardResponse)
 async def update_board(

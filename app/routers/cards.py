@@ -234,25 +234,39 @@ async def move_card(
         )
     
     old_column_id = card.column_id
-    
-    if old_column_id != move_data.target_column_id:
-        cards_in_old = db.query(Card).filter(
+    target_position = max(0, move_data.position)
+
+    if old_column_id == move_data.target_column_id:
+        ordered_cards = db.query(Card).filter(
             Card.column_id == old_column_id,
-            Card.position > card.position
-        ).all()
-        for c in cards_in_old:
-            c.position -= 1
-    
-    cards_in_new = db.query(Card).filter(
-        Card.column_id == move_data.target_column_id,
-        Card.position >= move_data.position,
-        Card.id != card_id
-    ).all()
-    for c in cards_in_new:
-        c.position += 1
-    
-    card.column_id = move_data.target_column_id
-    card.position = move_data.position
+            Card.id != card_id
+        ).order_by(Card.position, Card.id).all()
+
+        target_position = min(target_position, len(ordered_cards))
+        ordered_cards.insert(target_position, card)
+
+        for position, item in enumerate(ordered_cards):
+            item.position = position
+    else:
+        old_cards = db.query(Card).filter(
+            Card.column_id == old_column_id,
+            Card.id != card_id
+        ).order_by(Card.position, Card.id).all()
+
+        for position, item in enumerate(old_cards):
+            item.position = position
+
+        target_cards = db.query(Card).filter(
+            Card.column_id == move_data.target_column_id,
+            Card.id != card_id
+        ).order_by(Card.position, Card.id).all()
+
+        target_position = min(target_position, len(target_cards))
+        card.column_id = move_data.target_column_id
+        target_cards.insert(target_position, card)
+
+        for position, item in enumerate(target_cards):
+            item.position = position
     
     db.commit()
     db.refresh(card)
