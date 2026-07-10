@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
 from app.database import get_db
-from app.models import User, Board, BoardColumn
+from app.models import User, Board, Column
 from app.schemas import ColumnCreate, ColumnUpdate, ColumnResponse
 from app.auth import get_current_user
 from app.dependencies import can_read_board, can_manage_columns
@@ -21,7 +21,7 @@ async def get_columns(
             detail="You don't have access to this board"
         )
     
-    columns = db.query(BoardColumn).filter(BoardColumn.board_id == board_id).order_by(BoardColumn.position).all()
+    columns = db.query(Column).filter(Column.board_id == board_id).order_by(Column.position).all()
     return columns
 
 @router.post("/boards/{board_id}/columns", response_model=ColumnResponse)
@@ -41,7 +41,7 @@ async def create_column(
     if not board:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Board not found")
     
-    new_column = BoardColumn(
+    new_column = Column(
         board_id=board_id,
         title=column_data.title,
         position=column_data.position or 0
@@ -58,7 +58,7 @@ async def update_column(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    column = db.query(BoardColumn).filter(BoardColumn.id == column_id).first()
+    column = db.query(Column).filter(Column.id == column_id).first()
     if not column:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Column not found")
     
@@ -94,7 +94,7 @@ async def delete_column(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    column = db.query(BoardColumn).filter(BoardColumn.id == column_id).first()
+    column = db.query(Column).filter(Column.id == column_id).first()
     if not column:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Column not found")
     

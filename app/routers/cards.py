@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
 from app.database import get_db
-from app.models import User, Board, Card, BoardColumn
+from app.models import User, Board, Card, Column
 from app.schemas import CardCreate, CardUpdate, CardResponse, CardMove
 from app.auth import get_current_user
 from app.dependencies import (
@@ -18,7 +18,7 @@ async def get_cards(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    column = db.query(BoardColumn).filter(BoardColumn.id == column_id).first()
+    column = db.query(Column).filter(Column.id == column_id).first()
     if not column:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Column not found")
     
@@ -53,7 +53,7 @@ async def create_card(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    column = db.query(BoardColumn).filter(BoardColumn.id == column_id).first()
+    column = db.query(Column).filter(Column.id == column_id).first()
     if not column:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Column not found")
     
@@ -216,7 +216,7 @@ async def move_card(
     if not card:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Card not found")
     
-    target_column = db.query(BoardColumn).filter(BoardColumn.id == move_data.target_column_id).first()
+    target_column = db.query(Column).filter(Column.id == move_data.target_column_id).first()
     if not target_column:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Target column not found")
     
