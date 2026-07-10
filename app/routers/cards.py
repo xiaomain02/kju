@@ -216,6 +216,16 @@ async def move_card(
     if not card:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Card not found")
     
+    if card.version != move_data.version:
+        db.refresh(card)
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "message": "Card was updated by another user",
+                "current_version": card.version
+            }
+        )
+    
     target_column = db.query(Column).filter(Column.id == move_data.target_column_id).first()
     if not target_column:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Target column not found")
@@ -253,6 +263,7 @@ async def move_card(
     
     card.column_id = move_data.target_column_id
     card.position = move_data.position
+    card.version += 1
     
     db.commit()
     db.refresh(card)

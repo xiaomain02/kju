@@ -168,6 +168,7 @@ class CardUpdate(BaseModel):
 class CardMove(BaseModel):
     target_column_id: int
     position: int = Field(..., ge=0)
+    version: int
 
 
 class CardResponse(BaseModel):
