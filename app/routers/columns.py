@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
-from app.database import get_db
-from app.models import User, Board, Column
-from app.schemas import ColumnCreate, ColumnUpdate, ColumnResponse
-from app.auth import get_current_user
-from app.dependencies import can_read_board, can_manage_columns
+from database import get_db
+from models import User, Board, Column
+from schemas import ColumnCreate, ColumnUpdate, ColumnResponse
+from auth import get_current_user
+from dependencies import can_read_board, can_manage_columns
 
 router = APIRouter(prefix="/api/columns", tags=["columns"])
 

@@ -5,7 +5,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.pool import NullPool
 
-from app.models import Base
+from models import Base
 
 def get_default_data_dir() -> Path:
     custom_dir = os.environ.get('KJU_DATA_DIR')

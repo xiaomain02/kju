@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.database import engine, Base
-from app.routers import auth, boards, columns, cards, comments
+from database import engine, Base
+from routers import auth, boards, columns, cards, comments
 
 Base.metadata.create_all(bind=engine)
 
@@ -33,6 +33,6 @@ async def root():
         "redoc": "/redoc"
     }
 
-@app.get("/health")
+@app.get("/api/health")
 async def health_check():
     return {"status": "ok"}

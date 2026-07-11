@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
-from app.database import get_db
-from app.models import User, Board, Card, Column
-from app.schemas import CardCreate, CardUpdate, CardResponse, CardMove
-from app.auth import get_current_user
-from app.dependencies import (
+from database import get_db
+from models import User, Board, Card, Column
+from schemas import CardCreate, CardUpdate, CardResponse, CardMove
+from auth import get_current_user
+from dependencies import (
     can_read_board, can_create_cards, can_edit_own_cards,
     is_board_member, is_overdue
 )

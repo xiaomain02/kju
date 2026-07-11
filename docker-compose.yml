@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: app/Dockerfile
+    container_name: kanban-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./app/data:/app/data
+    environment:
+      - DATABASE_URL=sqlite:////app/data/kanban.db
+      - SECRET_KEY=${SECRET_KEY:-dev-secret-key}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-jwt-dev-secret}
+    restart: unless-stopped
+    networks:
+      - kanban-network
+
+  frontend:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: kanban-frontend
+    ports:
+      - "80:80"
+      - "8080:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - kanban-network
+
+networks:
+  kanban-network:
+    driver: bridge

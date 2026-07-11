@@ -4,7 +4,7 @@ const dropIndicator = document.createElement("div");
 dropIndicator.className = "drop-marker";
 
 const state = {
-  apiBase: localStorage.getItem("kju.apiBase") || "http://127.0.0.1:8000",
+  apiBase: "",
   token: localStorage.getItem("kju.token") || "",
   authMode: "login",
   user: null,
@@ -71,8 +71,9 @@ function getErrorMessage(payload) {
 
 function normalizeApiBase(value) {
   const base = String(value || "").trim().replace(/\/$/, "");
-  if (!base) return "http://127.0.0.1:8000";
-  return /^https?:\/\//i.test(base) ? base : `http://${base}`;
+  if (!base) return "";
+  if (/^https?:\/\//i.test(base)) return base;
+  return `http://${base}`;
 }
 
 async function api(path, options = {}) {
@@ -933,8 +934,8 @@ app.addEventListener("submit", async (event) => {
 
   try {
     if (type === "auth") {
-      state.apiBase = normalizeApiBase(formData.get("apiBase") || state.apiBase);
-      localStorage.setItem("kju.apiBase", state.apiBase);
+      state.apiBase = "";
+      localStorage.removeItem("kju.apiBase");
       const payload = {
         email: formData.get("email"),
         password: formData.get("password"),

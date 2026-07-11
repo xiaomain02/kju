@@ -1,14 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
-from app.database import get_db
-from app.models import User, Board, BoardMember
-from app.schemas import (
+from database import get_db
+from models import User, Board, BoardMember
+from schemas import (
     BoardCreate, BoardUpdate, BoardResponse, BoardDetailResponse,
     BoardMemberResponse, MemberAdd, MemberRoleUpdate, BoardRole
 )
-from app.auth import get_current_user
-from app.dependencies import (
+from auth import get_current_user
+from dependencies import (
     is_board_owner, is_board_member, can_read_board,
     can_manage_members, can_delete_board
 )

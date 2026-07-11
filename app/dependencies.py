@@ -1,8 +1,8 @@
 from typing import Optional
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
-from app.models import User, Board, BoardMember, Card, Column, Comment
-from app.schemas import BoardRole
+from models import User, Board, BoardMember, Card, Column, Comment
+from schemas import BoardRole
 from datetime import date
 
 

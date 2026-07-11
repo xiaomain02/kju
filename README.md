@@ -1,25 +1,45 @@
 # kju
 
-Kanban API на FastAPI и статический frontend в стиле VK dark.
+## Проект Kanban доска
 
-## Backend
+### как запустить через Docker
 
-```powershell
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
+1) клонировать репозиторий
+```commandline
+git clone ссылка на репозиторий
+```
+2) перейти в нужную папку
+```commandline
+cd kju
+```
+3) установить зависимости
+```commandline
 pip install -r requirements.txt
-python -m uvicorn app.main:app --reload
 ```
-
-API будет доступен на `http://127.0.0.1:8000`.
-
-По умолчанию SQLite база хранится вне папки OneDrive: `%LOCALAPPDATA%\KJU\kanban.db` на Windows. Если нужен другой путь, задай `DATABASE_URL` или `KJU_DATA_DIR` перед запуском.
-
-## Frontend
-
-```powershell
-cd client
-python -m http.server 5173
+4) перейти в терминал докера и собрать контейнер
+```commandline
+docker-compose build
 ```
+5) запустить контейнер
+```commandline
+docker-compose up -d
+```
+6) перейти на http://localhost
 
-Открой `http://127.0.0.1:5173`. В поле API оставь `http://127.0.0.1:8000`, если backend запущен локально.
+### Технологии
+
+- Backend: Fastapi
+- DB: SQLite, alembic
+- Frontend: HTML, CSS, vanilla js
+- Сборка: Docker
+
+### ER-схема базы данных и механизм защиты
+![img.png](img.png)
+
+Механизм зашиты от коллизий - Оптимистичная блокировка (Optimistic Locking).\
+Этот вид был выбран как наиболее подходящий для веб-приложений: хорошая производительность, надёжная, легка в реализации.\
+В таблицы, которые могут изменяться, добавлено версионирование.
+
+При каждом обновлении выполняется проверка версии. При несовпадении версий, возвращается ошибка 409 и \
+пользователю предлагается обновить данные.
+
