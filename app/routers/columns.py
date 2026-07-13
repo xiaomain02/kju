@@ -8,41 +8,42 @@ from auth import get_current_user
 from dependencies import can_read_board, can_manage_columns
 from utils.logger import log_action
 
-
 router = APIRouter(prefix="/api/columns", tags=["columns"])
+
 
 @router.get("/boards/{board_id}/columns", response_model=List[ColumnResponse])
 async def get_columns(
-    board_id: int,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+        board_id: int,
+        current_user: User = Depends(get_current_user),
+        db: Session = Depends(get_db)
 ):
     if not can_read_board(board_id, current_user.id, db):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You don't have access to this board"
         )
-    
+
     columns = db.query(Column).filter(Column.board_id == board_id).order_by(Column.position).all()
     return columns
 
+
 @router.post("/boards/{board_id}/columns", response_model=ColumnResponse)
 async def create_column(
-    board_id: int,
-    column_data: ColumnCreate,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+        board_id: int,
+        column_data: ColumnCreate,
+        current_user: User = Depends(get_current_user),
+        db: Session = Depends(get_db)
 ):
     if not can_manage_columns(board_id, current_user.id, db):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only board owner can create columns"
         )
-    
+
     board = db.query(Board).filter(Board.id == board_id).first()
     if not board:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Board not found")
-    
+
     new_column = Column(
         board_id=board_id,
         title=column_data.title,
@@ -61,30 +62,32 @@ async def create_column(
         new_values={
             "title": new_column.title,
             "board_id": new_column.board_id,
+            "board_name": board.title,  # 👈 Название доски
             "position": new_column.position
         }
     )
 
     return new_column
 
+
 @router.put("/{column_id}", response_model=ColumnResponse)
 async def update_column(
-    column_id: int,
-    column_data: ColumnUpdate,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+        column_id: int,
+        column_data: ColumnUpdate,
+        current_user: User = Depends(get_current_user),
+        db: Session = Depends(get_db)
 ):
     column = db.query(Column).filter(Column.id == column_id).first()
     if not column:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Column not found")
-    
+
     board = db.query(Board).filter(Board.id == column.board_id).first()
     if board.owner_id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only board owner can update columns"
         )
-    
+
     if column.version != column_data.version:
         db.refresh(column)
         raise HTTPException(
@@ -99,11 +102,11 @@ async def update_column(
         "title": column.title,
         "position": column.position
     }
-    
+
     for key, value in column_data.model_dump(exclude_unset=True).items():
         if key != "version":
             setattr(column, key, value)
-    
+
     column.version += 1
     db.commit()
     db.refresh(column)
@@ -117,22 +120,24 @@ async def update_column(
         old_values=old_values,
         new_values={
             "title": column.title,
-            "position": column.position
+            "position": column.position,
+            "board_name": board.title  # 👈 Название доски
         }
     )
 
     return column
 
+
 @router.delete("/{column_id}")
 async def delete_column(
-    column_id: int,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+        column_id: int,
+        current_user: User = Depends(get_current_user),
+        db: Session = Depends(get_db)
 ):
     column = db.query(Column).filter(Column.id == column_id).first()
     if not column:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Column not found")
-    
+
     board = db.query(Board).filter(Board.id == column.board_id).first()
     if board.owner_id != current_user.id:
         raise HTTPException(
@@ -148,7 +153,8 @@ async def delete_column(
         entity_id=column_id,
         old_values={
             "title": column.title,
-            "board_id": column.board_id
+            "board_id": column.board_id,
+            "board_name": board.title  # 👈 Название доски
         }
     )
 

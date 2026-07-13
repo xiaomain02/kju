@@ -19,6 +19,7 @@ const state = {
   drag: null,
   drop: null,
   modal: null,
+  auditLogs: null,
 };
 
 const priorityLabel = {
@@ -57,6 +58,17 @@ function formatDate(value) {
     day: "2-digit",
     month: "short",
   }).format(new Date(`${value}T00:00:00`));
+}
+function formatDateTime(iso) {
+  if (!iso) return "";
+  const date = new Date(iso);
+  return new Intl.DateTimeFormat("ru-RU", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
 }
 
 function getErrorMessage(payload) {
@@ -167,6 +179,7 @@ async function selectBoard(boardId, shouldRender = true) {
     }),
   );
   state.cardsByColumn = Object.fromEntries(entries);
+  state.auditLogs = null;
   if (shouldRender) render();
 }
 
@@ -521,6 +534,18 @@ function renderCard(card, columnId) {
 
 function renderMembers() {
   const canManage = canManageMembers();
+  const showAuditButton = isOwner();
+
+  const auditHtml = state.auditLogs ? `
+  <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #2a2a4a;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+      <h3 style="color: #e94560; font-size: 14px;">📋 История изменений</h3>
+      <button class="ghost-btn" data-action="close-audit" style="font-size: 12px; padding: 4px 8px;">✕ Закрыть</button>
+    </div>
+    ${renderAuditLogs()}
+  </div>
+` : '';
+
   return `
     <aside class="members-panel">
       <div class="panel-head">
@@ -538,11 +563,200 @@ function renderMembers() {
             </form>`
           : ""
       }
+      ${
+  showAuditButton && !state.auditLogs ? `
+    <button class="ghost-btn" data-action="show-audit" style="margin-top: 12px; width: 100%;">
+      ${icon("clock")} История изменений
+    </button>
+  ` : ''
+}
       <div class="member-list">
         ${state.board.members.map((member) => renderMember(member, canManage)).join("")}
       </div>
+    ${auditHtml}
     </aside>
   `;
+}
+
+function renderAuditLogs() {
+  if (!state.auditLogs || state.auditLogs.logs.length === 0) {
+    return `
+      <div class="empty-state-inner">
+        <p style="color: #888;">История изменений пуста</p>
+      </div>
+    `;
+  }
+
+  const logsHtml = state.auditLogs.logs.map((log, index) => {
+    const actionText = formatAuditMessage(log);
+    return `
+      <div class="audit-log-item" style="
+        padding: 12px;
+        border-bottom: 1px solid #2a2a4a;
+        display: flex;
+        gap: 12px;
+        align-items: flex-start;
+      ">
+        <span style="
+          background: #2a2a5e;
+          border-radius: 50%;
+          width: 28px;
+          height: 28px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 12px;
+          font-weight: bold;
+          flex-shrink: 0;
+          color: #aaa;
+        ">${index + 1}</span>
+        <div style="flex: 1;">
+          <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
+            <strong style="color: #e94560;">${escapeHtml(log.user || "Пользователь")}</strong>
+            <span style="color: #666; font-size: 12px;">${escapeHtml(formatDateTime(log.created_at))}</span>
+          </div>
+          <div style="margin-top: 4px; color: #ddd; font-size: 14px;">${actionText}</div>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  return `
+    <div class="audit-logs-list" style="max-height: 400px; overflow-y: auto;">
+      ${logsHtml}
+    </div>
+  `;
+}
+
+function formatAuditMessage(log) {
+  let oldValues = null;
+  let newValues = null;
+  try {
+    oldValues = typeof log.old_values === 'string' ? JSON.parse(log.old_values) : log.old_values;
+  } catch {}
+  try {
+    newValues = typeof log.new_values === 'string' ? JSON.parse(log.new_values) : log.new_values;
+  } catch {}
+
+  const actionMap = {
+    'create': 'создал',
+    'update': 'обновил',
+    'delete': 'удалил',
+    'move': 'переместил',
+    'login': 'вошёл в систему',
+    'register': 'зарегистрировался',
+    'add_member': 'добавил участника',
+    'remove_member': 'удалил участника',
+    'change_role': 'изменил роль',
+    'assign': 'назначил исполнителя',
+  };
+
+  const actionVerb = actionMap[log.action] || log.action;
+
+
+  if (log.entity_type === 'card') {
+
+    const cardTitle = newValues?.card_name || newValues?.title || oldValues?.card_name || oldValues?.title || `#${log.entity_id}`;
+    const oldColumn = oldValues?.column_name || '';
+    const newColumn = newValues?.column_name || '';
+
+    if (log.action === 'move') {
+      if (oldColumn && newColumn) {
+        return `${actionVerb} карточку "${cardTitle}" из колонки "${oldColumn}" в колонку "${newColumn}"`;
+      } else if (newColumn) {
+        return `${actionVerb} карточку "${cardTitle}" в колонку "${newColumn}"`;
+      } else if (oldColumn) {
+        return `${actionVerb} карточку "${cardTitle}" из колонки "${oldColumn}"`;
+      }
+      return `${actionVerb} карточку "${cardTitle}"`;
+    }
+
+    if (log.action === 'update') {
+      const changes = [];
+      const oldTitle = oldValues?.title || '';
+      const newTitle = newValues?.title || '';
+      if (oldTitle && newTitle && oldTitle !== newTitle) {
+        changes.push(`название "${oldTitle}" → "${newTitle}"`);
+      }
+      const oldAssignee = oldValues?.assignee_name || oldValues?.assignee_id || '';
+      const newAssignee = newValues?.assignee_name || newValues?.assignee_id || '';
+      if (oldAssignee && newAssignee && oldAssignee !== newAssignee) {
+        changes.push(`исполнитель "${oldAssignee}" → "${newAssignee}"`);
+      }
+      if (oldValues?.priority && newValues?.priority && oldValues.priority !== newValues.priority) {
+        const priorityMap = { 'low': 'Низкий', 'medium': 'Средний', 'high': 'Высокий', 'critical': 'Критический' };
+        changes.push(`приоритет "${priorityMap[oldValues.priority] || oldValues.priority}" → "${priorityMap[newValues.priority] || newValues.priority}"`);
+      }
+      if (changes.length === 0) {
+        return `${actionVerb} карточку "${cardTitle}" (без изменений)`;
+      }
+      return `${actionVerb} карточку "${cardTitle}": ${changes.join(', ')}`;
+    }
+
+    return `${actionVerb} карточку "${cardTitle}"`;
+  }
+
+  if (log.entity_type === 'board') {
+    const name = newValues?.title || oldValues?.title || `#${log.entity_id}`;
+    return `${actionVerb} доску "${name}"`;
+  }
+
+  if (log.entity_type === 'column') {
+    const name = newValues?.title || oldValues?.title || `#${log.entity_id}`;
+    const boardName = newValues?.board_name || oldValues?.board_name || '';
+    if (boardName) {
+      return `${actionVerb} колонку "${name}" в доске "${boardName}"`;
+    }
+    return `${actionVerb} колонку "${name}"`;
+  }
+
+  if (log.entity_type === 'comment') {
+    const content = newValues?.content || oldValues?.content || '';
+    const snippet = content.length > 40 ? content.slice(0, 40) + '…' : content;
+    const cardTitle = newValues?.card_name || oldValues?.card_name || '';
+    if (cardTitle) {
+      return `${actionVerb} комментарий "${snippet}" в карточке "${cardTitle}"`;
+    }
+    return `${actionVerb} комментарий "${snippet}"`;
+  }
+
+    if (log.entity_type === 'board_member') {
+      const boardName = newValues?.board_name || oldValues?.board_name || '';
+      const email = newValues?.email || oldValues?.email || '';
+      const userName = newValues?.user_name || oldValues?.user_name || '';
+      const user = userName || email || `#${log.entity_id}`;
+
+      if (log.action === 'add_member') {
+        const boardPart = boardName ? ` в доску "${boardName}"` : '';
+        return `добавил участника ${user}${boardPart}`;
+      }
+      if (log.action === 'remove_member') {
+        const boardPart = boardName ? ` из доски "${boardName}"` : '';
+        return `удалил участника ${user}${boardPart}`;
+      }
+      if (log.action === 'change_role') {
+        const fromRole = oldValues?.role || 'неизвестно';
+        const toRole = newValues?.role || 'неизвестно';
+        const boardPart = boardName ? ` в доске "${boardName}"` : '';
+        return `изменил роль участника ${user} с "${fromRole}" на "${toRole}"${boardPart}`;
+      }
+    }
+
+  // --- Вход / регистрация ---
+  if (log.entity_type === 'user') {
+    if (log.action === 'login') {
+      const email = newValues?.email || '';
+      const username = newValues?.user_name || '';
+      return `вошёл в систему ${username || email}`;
+    }
+    if (log.action === 'register') {
+      const username = newValues?.username || '';
+      return `зарегистрировался как ${username}`;
+    }
+  }
+
+  // --- Если ничего не подошло ---
+  return `${actionVerb} ${log.entity_type} #${log.entity_id}`;
 }
 
 function renderMember(member, canManage) {
@@ -1080,6 +1294,20 @@ app.addEventListener("click", async (event) => {
   try {
     if (action === "auth-mode") {
       state.authMode = actionNode.dataset.mode;
+      render();
+    }
+    if (action === "show-audit") {
+      try {
+        const response = await api(`/api/audit/board/${state.boardId}?limit=20`);
+        state.auditLogs = response;
+        render();
+      } catch (error) {
+        toast(error.message, "error");
+      }
+    }
+
+    if (action === "close-audit") {
+      state.auditLogs = null;
       render();
     }
     if (action === "logout") logout();
