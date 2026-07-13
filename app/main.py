@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from database import engine, Base
-from routers import auth, boards, columns, cards, comments
+from routers import auth, boards, columns, cards, comments, audit
 
 Base.metadata.create_all(bind=engine)
 
@@ -24,6 +24,7 @@ app.include_router(boards.router)
 app.include_router(columns.router)
 app.include_router(cards.router)
 app.include_router(comments.router)
+app.include_router(audit.router)
 
 @app.get("/")
 async def root():

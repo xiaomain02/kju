@@ -6,6 +6,7 @@ from models import User, Card, Comment, Board
 from schemas import CommentCreate, CommentUpdate, CommentResponse
 from auth import get_current_user
 from dependencies import can_read_board, can_delete_comment
+from utils.logger import log_action
 
 router = APIRouter(prefix="/api/comments", tags=["comments"])
 
@@ -63,6 +64,18 @@ async def add_comment(
     db.add(new_comment)
     db.commit()
     db.refresh(new_comment)
+
+    log_action(
+        db=db,
+        user_id=current_user.id,
+        action="create",
+        entity_type="comment",
+        entity_id=new_comment.id,
+        new_values={
+            "card_id": card_id,
+            "content": new_comment.content
+        }
+    )
     
     response = CommentResponse.model_validate(new_comment)
     response.user = current_user
@@ -95,11 +108,22 @@ async def update_comment(
                 "current_version": comment.version
             }
         )
-    
+
+    old_values = {"content": comment.content}
     comment.content = comment_data.content
     comment.version += 1
     db.commit()
     db.refresh(comment)
+
+    log_action(
+        db=db,
+        user_id=current_user.id,
+        action="update",
+        entity_type="comment",
+        entity_id=comment_id,
+        old_values=old_values,
+        new_values={"content": comment.content}
+    )
     
     response = CommentResponse.model_validate(comment)
     response.user = current_user
@@ -121,6 +145,18 @@ async def delete_comment(
     comment = db.query(Comment).filter(Comment.id == comment_id).first()
     if not comment:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Comment not found")
+
+    log_action(
+        db=db,
+        user_id=current_user.id,
+        action="delete",
+        entity_type="comment",
+        entity_id=comment_id,
+        old_values={
+            "card_id": comment.card_id,
+            "content": comment.content
+        }
+    )
     
     db.delete(comment)
     db.commit()

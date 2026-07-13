@@ -4,6 +4,7 @@ from database import get_db
 from models import User
 from schemas import UserCreate, UserLogin, Token, UserResponse, UserUpdate
 from auth import verify_password, get_password_hash, create_access_token, get_current_user
+from utils.logger import log_action
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
@@ -28,6 +29,15 @@ async def register(user_data: UserCreate, db: Session = Depends(get_db)):
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
+
+    log_action(
+        db=db,
+        user_id=new_user.id,
+        action="register",
+        entity_type="user",
+        entity_id=new_user.id,
+        new_values={"username": new_user.username, "email": new_user.email}
+    )
     
     access_token = create_access_token(data={"sub": str(new_user.id)})
     
@@ -47,6 +57,15 @@ async def login(user_data: UserLogin, db: Session = Depends(get_db)):
             detail="Invalid email or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+    log_action(
+        db=db,
+        user_id=user.id,
+        action="login",
+        entity_type="user",
+        entity_id=user.id,
+        new_values={"email": user.email}
+    )
     
     access_token = create_access_token(data={"sub": str(user.id)})
     
@@ -68,6 +87,11 @@ async def update_user(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
+    old_values = {
+        "username": current_user.username,
+        "email": current_user.email,
+    }
+
     if current_user.version != user_data.version:
         db.refresh(current_user)
         raise HTTPException(
@@ -108,4 +132,14 @@ async def update_user(
     current_user.version += 1
     db.commit()
     db.refresh(current_user)
+
+    log_action(
+        db=db,
+        user_id=current_user.id,
+        action="update",
+        entity_type="user",
+        entity_id=current_user.id,
+        old_values=old_values,
+        new_values={"username": current_user.username, "email": current_user.email}
+    )
     return current_user

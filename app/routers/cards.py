@@ -9,6 +9,7 @@ from dependencies import (
     can_read_board, can_create_cards, can_edit_own_cards,
     is_board_member, is_overdue
 )
+from utils.logger import log_action
 
 router = APIRouter(prefix="/api/cards", tags=["cards"])
 
@@ -85,6 +86,19 @@ async def create_card(
     db.add(new_card)
     db.commit()
     db.refresh(new_card)
+
+    log_action(
+        db=db,
+        user_id=current_user.id,
+        action="create",
+        entity_type="card",
+        entity_id=new_card.id,
+        new_values={
+            "title": new_card.title,
+            "column_id": new_card.column_id,
+            "priority": new_card.priority
+        }
+    )
     
     response = CardResponse.model_validate(new_card)
     response.is_overdue = is_overdue(new_card.deadline)
@@ -159,6 +173,13 @@ async def update_card(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Assignee must be a member of this board"
             )
+
+    old_values = {
+        "title": card.title,
+        "description": card.description,
+        "priority": card.priority,
+        "assignee_id": card.assignee_id
+    }
     
     for key, value in card_data.model_dump(exclude_unset=True).items():
         if key != "version":
@@ -167,6 +188,21 @@ async def update_card(
     card.version += 1
     db.commit()
     db.refresh(card)
+
+    log_action(
+        db=db,
+        user_id=current_user.id,
+        action="update",
+        entity_type="card",
+        entity_id=card_id,
+        old_values=old_values,
+        new_values={
+            "title": card.title,
+            "description": card.description,
+            "priority": card.priority,
+            "assignee_id": card.assignee_id
+        }
+    )
     
     response = CardResponse.model_validate(card)
     response.is_overdue = is_overdue(card.deadline)
@@ -194,6 +230,19 @@ async def delete_card(
     card = db.query(Card).filter(Card.id == card_id).first()
     if not card:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Card not found")
+
+    log_action(
+        db=db,
+        user_id=current_user.id,
+        action="delete",
+        entity_type="card",
+        entity_id=card_id,
+        old_values={
+            "title": card.title,
+            "column_id": card.column_id,
+            "priority": card.priority
+        }
+    )
     
     db.delete(card)
     db.commit()
@@ -234,6 +283,8 @@ async def move_card(
         )
     
     old_column_id = card.column_id
+    old_position = card.position
+
     target_position = max(0, move_data.position)
 
     if old_column_id == move_data.target_column_id:
@@ -270,6 +321,22 @@ async def move_card(
     
     db.commit()
     db.refresh(card)
+
+    log_action(
+        db=db,
+        user_id=current_user.id,
+        action="move",
+        entity_type="card",
+        entity_id=card_id,
+        old_values={
+            "column_id": old_column_id,
+            "position": old_position
+        },
+        new_values={
+            "column_id": card.column_id,
+            "position": card.position
+        }
+    )
     
     response = CardResponse.model_validate(card)
     response.is_overdue = is_overdue(card.deadline)
@@ -306,9 +373,20 @@ async def assign_executor(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Assignee must be a member of this board"
         )
-    
+
+    old_assignee = card.assignee_id
     card.assignee_id = assignee_id
     db.commit()
     db.refresh(card)
+
+    log_action(
+        db=db,
+        user_id=current_user.id,
+        action="assign",
+        entity_type="card",
+        entity_id=card_id,
+        old_values={"assignee_id": old_assignee},
+        new_values={"assignee_id": assignee_id}
+    )
     
     return {"message": "Assignee updated successfully"}

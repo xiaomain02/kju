@@ -6,6 +6,8 @@ from models import User, Board, Column
 from schemas import ColumnCreate, ColumnUpdate, ColumnResponse
 from auth import get_current_user
 from dependencies import can_read_board, can_manage_columns
+from utils.logger import log_action
+
 
 router = APIRouter(prefix="/api/columns", tags=["columns"])
 
@@ -49,6 +51,20 @@ async def create_column(
     db.add(new_column)
     db.commit()
     db.refresh(new_column)
+
+    log_action(
+        db=db,
+        user_id=current_user.id,
+        action="create",
+        entity_type="column",
+        entity_id=new_column.id,
+        new_values={
+            "title": new_column.title,
+            "board_id": new_column.board_id,
+            "position": new_column.position
+        }
+    )
+
     return new_column
 
 @router.put("/{column_id}", response_model=ColumnResponse)
@@ -78,6 +94,11 @@ async def update_column(
                 "current_version": column.version
             }
         )
+
+    old_values = {
+        "title": column.title,
+        "position": column.position
+    }
     
     for key, value in column_data.model_dump(exclude_unset=True).items():
         if key != "version":
@@ -86,6 +107,20 @@ async def update_column(
     column.version += 1
     db.commit()
     db.refresh(column)
+
+    log_action(
+        db=db,
+        user_id=current_user.id,
+        action="update",
+        entity_type="column",
+        entity_id=column_id,
+        old_values=old_values,
+        new_values={
+            "title": column.title,
+            "position": column.position
+        }
+    )
+
     return column
 
 @router.delete("/{column_id}")
@@ -104,7 +139,19 @@ async def delete_column(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only board owner can delete columns"
         )
-    
+
+    log_action(
+        db=db,
+        user_id=current_user.id,
+        action="delete",
+        entity_type="column",
+        entity_id=column_id,
+        old_values={
+            "title": column.title,
+            "board_id": column.board_id
+        }
+    )
+
     db.delete(column)
     db.commit()
     return {"message": "Column deleted successfully"}

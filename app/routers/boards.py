@@ -12,6 +12,7 @@ from dependencies import (
     is_board_owner, is_board_member, can_read_board,
     can_manage_members, can_delete_board
 )
+from utils.logger import log_action
 
 router = APIRouter(prefix="/api/boards", tags=["boards"])
 
@@ -54,6 +55,15 @@ async def create_board(
     db.add(board_member)
     db.commit()
     db.refresh(new_board)
+
+    log_action(
+        db=db,
+        user_id=current_user.id,
+        action="create",
+        entity_type="board",
+        entity_id=new_board.id,
+        new_values={"title": new_board.title}
+    )
     
     return new_board
 
@@ -121,13 +131,25 @@ async def update_board(
                 "current_version": board.version
             }
         )
-    
+
+    old_values = {"title": board.title}
+
     if board_data.title is not None:
         board.title = board_data.title
     
     board.version += 1
     db.commit()
     db.refresh(board)
+
+    log_action(
+        db=db,
+        user_id=current_user.id,
+        action="update",
+        entity_type="board",
+        entity_id=board_id,
+        old_values=old_values,
+        new_values={"title": board.title}
+    )
     return board
 
 @router.delete("/{board_id}")
@@ -145,6 +167,17 @@ async def delete_board(
     board = db.query(Board).filter(Board.id == board_id).first()
     if not board:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Board not found")
+
+    old_values = {"title": board.title}
+
+    log_action(
+        db=db,
+        user_id=current_user.id,
+        action="delete",
+        entity_type="board",
+        entity_id=board_id,
+        old_values=old_values
+    )
     
     db.delete(board)
     db.commit()
@@ -183,6 +216,15 @@ async def add_member(
     db.add(new_member)
     db.commit()
     db.refresh(new_member)
+
+    log_action(
+        db=db,
+        user_id=current_user.id,
+        action="add_member",
+        entity_type="board",
+        entity_id=board_id,
+        new_values={"added_user_id": user_to_add.id, "email": user_to_add.email}
+    )
     
     return {
         "user_id": user_to_add.id,
@@ -219,10 +261,21 @@ async def change_member_role(
     
     if not member:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Member not found")
-    
+
+    old_values = {"role": member.role}
     member.role = role_data.role
     db.commit()
     db.refresh(member)
+
+    log_action(
+        db=db,
+        user_id=current_user.id,
+        action="change_role",
+        entity_type="board_member",
+        entity_id=member.id,
+        old_values=old_values,
+        new_values={"role": member.role}
+    )
     
     return {"message": f"Role changed to {role_data.role}"}
 
@@ -252,6 +305,15 @@ async def remove_member(
     
     if not member:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Member not found")
+
+    log_action(
+        db=db,
+        user_id=current_user.id,
+        action="remove_member",
+        entity_type="board_member",
+        entity_id=member.id,
+        old_values={"user_id": user_id, "role": member.role}
+    )
     
     db.delete(member)
     db.commit()

@@ -1,6 +1,6 @@
 from sqlalchemy import (
     Column, Integer, String, Text, DateTime,
-    ForeignKey, Boolean, Date, CheckConstraint
+    ForeignKey, Boolean, Date, CheckConstraint, Index
 )
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql import func
@@ -28,6 +28,8 @@ class User(Base):
     cards_assigned = relationship('Card', foreign_keys='Card.assignee_id', back_populates='assignee')
     comments = relationship('Comment', back_populates='user')
 
+    __table_args__ = (Index('idx_users_version', 'version'),)
+
     def __repr__(self):
         return f'<User {self.username}>'
 
@@ -46,6 +48,10 @@ class Board(Base):
     members = relationship('BoardMember', back_populates='board', cascade='all, delete-orphan')
     columns = relationship('Column', back_populates='board', cascade='all, delete-orphan')
 
+    __table_args__ = (
+        Index('idx_boards_version', 'version'),
+    )
+
     def __repr__(self):
         return f'<Board {self.title}>'
 
@@ -61,6 +67,11 @@ class BoardMember(Base):
 
     board = relationship('Board', back_populates='members')
     user = relationship('User', back_populates='board_members')
+
+    __table_args__ = (
+        Index('idx_board_members_user_id', 'user_id'),
+        Index('idx_board_members_version', 'version'),
+    )
 
     def __repr__(self):
         return f'<BoardMember board={self.board_id} user={self.user_id} role={self.role}>'
@@ -79,6 +90,10 @@ class Column(Base):
 
     board = relationship('Board', back_populates='columns')
     cards = relationship('Card', back_populates='column', cascade='all, delete-orphan')
+
+    __table_args__ = (
+        Index('idx_columns_version', 'version'),
+    )
 
     def __repr__(self):
         return f'<Column {self.title}>'
@@ -111,6 +126,12 @@ class Card(Base):
 
     __table_args__ = (
         CheckConstraint("priority IN ('low', 'medium', 'high')"),
+        Index('idx_cards_column_id', 'column_id'),
+        Index('idx_cards_assignee_id', 'assignee_id'),
+        Index('idx_cards_deadline', 'deadline'),
+        Index('idx_cards_priority', 'priority'),
+        Index('idx_cards_archived', 'is_archived'),
+        Index('idx_cards_version', 'version'),
     )
 
     def __repr__(self):
@@ -131,5 +152,35 @@ class Comment(Base):
     card = relationship('Card', back_populates='comments')
     user = relationship('User', back_populates='comments')
 
+    __table_args__ = (
+        Index('idx_comments_card_id', 'card_id'),
+        Index('idx_comments_version', 'version'),
+    )
+
     def __repr__(self):
         return f'<Comment {self.id} on card {self.card_id}>'
+
+
+class AuditLog(Base):
+    __tablename__ = 'audit_log'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key = True, index = True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+    action: Mapped[str] = mapped_column(String(50), nullable=False)
+    entity_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    entity_id: Mapped[int] = mapped_column(Integer, nullable=False)
+    old_values: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    new_values: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+    user: Mapped["User"] = relationship("User", foreign_keys=[user_id])
+
+    __table_args__ = (
+        Index('idx_audit_log_user_id', 'user_id'),
+        Index('idx_audit_log_action', 'action'),
+        Index('idx_audit_log_entity', 'entity_type', 'entity_id'),
+        Index('idx_audit_log_created_at', 'created_at'),
+    )
+
+    def __repr__(self):
+        return f"<AuditLog {self.action} {self.entity_type} {self.entity_id} by {self.user_id}>"
