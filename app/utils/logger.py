@@ -9,6 +9,7 @@ def log_action(
         action: str,
         entity_type: str,
         entity_id: int,
+        board_id: int = None,
         old_values: dict = None,
         new_values: dict = None
 ):
@@ -21,6 +22,7 @@ def log_action(
 
     log_entry = AuditLog(
         user_id=user_id,
+        board_id=board_id,
         action=action,
         entity_type=entity_type,
         entity_id=entity_id,

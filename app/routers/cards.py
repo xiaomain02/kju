@@ -95,13 +95,14 @@ async def create_card(
     log_action(
         db=db,
         user_id=current_user.id,
+        board_id=column.board_id,  # 👈 ДОБАВЛЕНО
         action="create",
         entity_type="card",
         entity_id=new_card.id,
         new_values={
             "title": new_card.title,
             "column_id": new_card.column_id,
-            "column_name": column_title,  # 👈 Название колонки
+            "column_name": column_title,
             "priority": new_card.priority
         }
     )
@@ -164,6 +165,10 @@ async def update_card(
     if not card:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Card not found")
 
+    # Получаем board_id для лога
+    board = db.query(Board).filter(Board.id == card.column.board_id).first()
+    board_id = board.id if board else None
+
     if card.version != card_data.version:
         db.refresh(card)
         raise HTTPException(
@@ -200,6 +205,7 @@ async def update_card(
     log_action(
         db=db,
         user_id=current_user.id,
+        board_id=board_id,  # 👈 ДОБАВЛЕНО
         action="update",
         entity_type="card",
         entity_id=card_id,
@@ -243,17 +249,19 @@ async def delete_card(
     # Получаем название колонки для лога
     column = db.query(Column).filter(Column.id == card.column_id).first()
     column_title = column.title if column else None
+    board_id = column.board_id if column else None
 
     log_action(
         db=db,
         user_id=current_user.id,
+        board_id=board_id,  # 👈 ДОБАВЛЕНО
         action="delete",
         entity_type="card",
         entity_id=card_id,
         old_values={
             "title": card.title,
             "column_id": card.column_id,
-            "column_name": column_title,  # 👈 Название колонки
+            "column_name": column_title,
             "priority": card.priority
         }
     )
@@ -346,18 +354,19 @@ async def move_card(
     log_action(
         db=db,
         user_id=current_user.id,
+        board_id=board.id,  # 👈 ДОБАВЛЕНО
         action="move",
         entity_type="card",
         entity_id=card_id,
         old_values={
             "column_id": old_column_id,
-            "column_name": old_column_name,  # 👈 Название старой колонки
+            "column_name": old_column_name,
             "position": old_position,
             "title": card.title
         },
         new_values={
             "column_id": card.column_id,
-            "column_name": target_column_name,  # 👈 Название новой колонки
+            "column_name": target_column_name,
             "position": card.position,
             "title": card.title
         }
@@ -413,17 +422,18 @@ async def assign_executor(
     log_action(
         db=db,
         user_id=current_user.id,
+        board_id=board.id,  # 👈 ДОБАВЛЕНО
         action="assign",
         entity_type="card",
         entity_id=card_id,
         old_values={
             "assignee_id": old_assignee,
-            "assignee_name": old_user.username if old_user else None,  # 👈 Имя старого исполнителя
+            "assignee_name": old_user.username if old_user else None,
             "title": card.title
         },
         new_values={
             "assignee_id": assignee_id,
-            "assignee_name": new_user.username if new_user else None,  # 👈 Имя нового исполнителя
+            "assignee_name": new_user.username if new_user else None,
             "title": card.title
         }
     )

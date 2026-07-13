@@ -56,13 +56,14 @@ async def create_column(
     log_action(
         db=db,
         user_id=current_user.id,
+        board_id=board_id,  # 👈 ДОБАВЛЕНО
         action="create",
         entity_type="column",
         entity_id=new_column.id,
         new_values={
             "title": new_column.title,
             "board_id": new_column.board_id,
-            "board_name": board.title,  # 👈 Название доски
+            "board_name": board.title,
             "position": new_column.position
         }
     )
@@ -114,6 +115,7 @@ async def update_column(
     log_action(
         db=db,
         user_id=current_user.id,
+        board_id=column.board_id,  # 👈 ДОБАВЛЕНО
         action="update",
         entity_type="column",
         entity_id=column_id,
@@ -121,7 +123,7 @@ async def update_column(
         new_values={
             "title": column.title,
             "position": column.position,
-            "board_name": board.title  # 👈 Название доски
+            "board_name": board.title
         }
     )
 
@@ -148,13 +150,14 @@ async def delete_column(
     log_action(
         db=db,
         user_id=current_user.id,
+        board_id=column.board_id,  # 👈 ДОБАВЛЕНО
         action="delete",
         entity_type="column",
         entity_id=column_id,
         old_values={
             "title": column.title,
             "board_id": column.board_id,
-            "board_name": board.title  # 👈 Название доски
+            "board_name": board.title
         }
     )
 

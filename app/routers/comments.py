@@ -52,7 +52,9 @@ async def add_comment(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Card not found")
 
     board = db.query(Board).filter(Board.id == card.column.board_id).first()
-    if not can_read_board(board.id, current_user.id, db):
+    board_id = board.id if board else None
+
+    if not can_read_board(board_id, current_user.id, db):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You don't have access to this board"
@@ -70,12 +72,13 @@ async def add_comment(
     log_action(
         db=db,
         user_id=current_user.id,
+        board_id=board_id,  # 👈 ДОБАВЛЕНО
         action="create",
         entity_type="comment",
         entity_id=new_comment.id,
         new_values={
             "card_id": card_id,
-            "card_name": card.title,  # 👈 Название карточки
+            "card_name": card.title,
             "content": new_comment.content
         }
     )
@@ -118,9 +121,10 @@ async def update_comment(
         "card_id": comment.card_id
     }
 
-    # Получаем название карточки для лога
+    # Получаем название карточки и board_id для лога
     card = db.query(Card).filter(Card.id == comment.card_id).first()
     card_title = card.title if card else None
+    board_id = card.column.board_id if card else None
 
     comment.content = comment_data.content
     comment.version += 1
@@ -130,6 +134,7 @@ async def update_comment(
     log_action(
         db=db,
         user_id=current_user.id,
+        board_id=board_id,  # 👈 ДОБАВЛЕНО
         action="update",
         entity_type="comment",
         entity_id=comment_id,
@@ -137,7 +142,7 @@ async def update_comment(
         new_values={
             "content": comment.content,
             "card_id": comment.card_id,
-            "card_name": card_title  # 👈 Название карточки
+            "card_name": card_title
         }
     )
 
@@ -163,19 +168,21 @@ async def delete_comment(
     if not comment:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Comment not found")
 
-    # Получаем название карточки для лога
+    # Получаем название карточки и board_id для лога
     card = db.query(Card).filter(Card.id == comment.card_id).first()
     card_title = card.title if card else None
+    board_id = card.column.board_id if card else None
 
     log_action(
         db=db,
         user_id=current_user.id,
+        board_id=board_id,  # 👈 ДОБАВЛЕНО
         action="delete",
         entity_type="comment",
         entity_id=comment_id,
         old_values={
             "card_id": comment.card_id,
-            "card_name": card_title,  # 👈 Название карточки
+            "card_name": card_title,
             "content": comment.content
         }
     )

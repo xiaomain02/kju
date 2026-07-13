@@ -20,11 +20,11 @@ def parse_json_field(value):
 
 @router.get("/board/{board_id}")
 async def get_board_audit_logs(
-        board_id: int,
-        limit: int = 50,
-        offset: int = 0,
-        current_user: User = Depends(get_current_user),
-        db: Session = Depends(get_db)
+    board_id: int,
+    limit: int = 20,
+    offset: int = 0,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
 ):
     board = db.query(Board).filter(Board.id == board_id).first()
     if not board:
@@ -36,20 +36,9 @@ async def get_board_audit_logs(
             detail="Only board owner can view audit logs"
         )
 
-    # Получаем ID всех колонок этой доски
-    column_ids = [col.id for col in db.query(Column).filter(Column.board_id == board_id).all()]
-    # Получаем ID всех карточек этих колонок
-    card_ids = [card.id for card in db.query(Card).filter(Card.column_id.in_(column_ids)).all()]
-    # Получаем ID всех комментариев этих карточек
-    comment_ids = [comment.id for comment in db.query(Comment).filter(Comment.card_id.in_(card_ids)).all()]
-
-    # 👇 ВАЖНО: собираем все ID, которые относятся к этой доске
-    allowed_entity_ids = [board_id] + column_ids + card_ids + comment_ids
-
-    # 👇 Запрашиваем логи ТОЛЬКО по этим ID и нужным типам
+    # 👇 ПРОСТОЙ ЗАПРОС ПО board_id
     logs_query = db.query(AuditLog).filter(
-        AuditLog.entity_id.in_(allowed_entity_ids),
-        AuditLog.entity_type.in_(['board', 'column', 'card', 'comment', 'board_member'])
+        AuditLog.board_id == board_id
     ).order_by(AuditLog.created_at.desc())
 
     total = logs_query.count()
@@ -58,10 +47,6 @@ async def get_board_audit_logs(
     result = []
     for log in logs:
         user = db.query(User).filter(User.id == log.user_id).first()
-
-        old_values = parse_json_field(log.old_values)
-        new_values = parse_json_field(log.new_values)
-
         result.append({
             "id": log.id,
             "user": user.username if user else f"User {log.user_id}",
@@ -69,8 +54,8 @@ async def get_board_audit_logs(
             "action": log.action,
             "entity_type": log.entity_type,
             "entity_id": log.entity_id,
-            "old_values": old_values,
-            "new_values": new_values,
+            "old_values": parse_json_field(log.old_values),
+            "new_values": parse_json_field(log.new_values),
             "created_at": log.created_at.isoformat() if log.created_at else None
         })
 
