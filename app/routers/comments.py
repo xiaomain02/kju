@@ -72,7 +72,7 @@ async def add_comment(
     log_action(
         db=db,
         user_id=current_user.id,
-        board_id=board_id,  # 👈 ДОБАВЛЕНО
+        board_id=board_id,
         action="create",
         entity_type="comment",
         entity_id=new_comment.id,
@@ -121,7 +121,6 @@ async def update_comment(
         "card_id": comment.card_id
     }
 
-    # Получаем название карточки и board_id для лога
     card = db.query(Card).filter(Card.id == comment.card_id).first()
     card_title = card.title if card else None
     board_id = card.column.board_id if card else None
@@ -134,7 +133,7 @@ async def update_comment(
     log_action(
         db=db,
         user_id=current_user.id,
-        board_id=board_id,  # 👈 ДОБАВЛЕНО
+        board_id=board_id,
         action="update",
         entity_type="comment",
         entity_id=comment_id,
@@ -168,7 +167,6 @@ async def delete_comment(
     if not comment:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Comment not found")
 
-    # Получаем название карточки и board_id для лога
     card = db.query(Card).filter(Card.id == comment.card_id).first()
     card_title = card.title if card else None
     board_id = card.column.board_id if card else None
@@ -176,7 +174,7 @@ async def delete_comment(
     log_action(
         db=db,
         user_id=current_user.id,
-        board_id=board_id,  # 👈 ДОБАВЛЕНО
+        board_id=board_id,
         action="delete",
         entity_type="comment",
         entity_id=comment_id,

@@ -36,7 +36,6 @@ async def get_board_audit_logs(
             detail="Only board owner can view audit logs"
         )
 
-    # 👇 ПРОСТОЙ ЗАПРОС ПО board_id
     logs_query = db.query(AuditLog).filter(
         AuditLog.board_id == board_id
     ).order_by(AuditLog.created_at.desc())

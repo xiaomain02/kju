@@ -40,7 +40,7 @@ async def register(user_data: UserCreate, db: Session = Depends(get_db)):
         new_values={
             "username": new_user.username,
             "email": new_user.email,
-            "user_name": new_user.username  # 👈 Добавляем username для читаемости
+            "user_name": new_user.username
         }
     )
 
@@ -72,7 +72,7 @@ async def login(user_data: UserLogin, db: Session = Depends(get_db)):
         entity_id=user.id,
         new_values={
             "email": user.email,
-            "user_name": user.username  # 👈 Добавляем username для читаемости
+            "user_name": user.username
         }
     )
 
@@ -101,7 +101,7 @@ async def update_user(
     old_values = {
         "username": current_user.username,
         "email": current_user.email,
-        "user_name": current_user.username  # 👈 Добавляем username в old_values
+        "user_name": current_user.username
     }
 
     if current_user.version != user_data.version:
@@ -155,7 +155,7 @@ async def update_user(
         new_values={
             "username": current_user.username,
             "email": current_user.email,
-            "user_name": current_user.username  # 👈 Добавляем username в new_values
+            "user_name": current_user.username
         }
     )
 

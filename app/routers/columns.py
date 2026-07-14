@@ -56,7 +56,7 @@ async def create_column(
     log_action(
         db=db,
         user_id=current_user.id,
-        board_id=board_id,  # 👈 ДОБАВЛЕНО
+        board_id=board_id,
         action="create",
         entity_type="column",
         entity_id=new_column.id,
@@ -115,7 +115,7 @@ async def update_column(
     log_action(
         db=db,
         user_id=current_user.id,
-        board_id=column.board_id,  # 👈 ДОБАВЛЕНО
+        board_id=column.board_id,
         action="update",
         entity_type="column",
         entity_id=column_id,
@@ -150,7 +150,7 @@ async def delete_column(
     log_action(
         db=db,
         user_id=current_user.id,
-        board_id=column.board_id,  # 👈 ДОБАВЛЕНО
+        board_id=column.board_id,
         action="delete",
         entity_type="column",
         entity_id=column_id,

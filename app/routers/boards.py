@@ -149,7 +149,7 @@ async def update_board(
     log_action(
         db=db,
         user_id=current_user.id,
-        board_id=board_id,  # 👈 ДОБАВЛЕНО
+        board_id=board_id,
         action="update",
         entity_type="board",
         entity_id=board_id,
@@ -180,7 +180,7 @@ async def delete_board(
     log_action(
         db=db,
         user_id=current_user.id,
-        board_id=board_id,  # 👈 ДОБАВЛЕНО
+        board_id=board_id,
         action="delete",
         entity_type="board",
         entity_id=board_id,
@@ -230,7 +230,7 @@ async def add_member(
     log_action(
         db=db,
         user_id=current_user.id,
-        board_id=board_id,  # 👈 ДОБАВЛЕНО
+        board_id=board_id,
         action="add_member",
         entity_type="board_member",
         entity_id=board_id,
@@ -290,7 +290,7 @@ async def change_member_role(
     log_action(
         db=db,
         user_id=current_user.id,
-        board_id=board_id,  # 👈 ДОБАВЛЕНО
+        board_id=board_id,
         action="change_role",
         entity_type="board_member",
         entity_id=board_id,
@@ -342,9 +342,9 @@ async def remove_member(
     log_action(
         db=db,
         user_id=current_user.id,
-        board_id=board_id,  # 👈 ДОБАВЛЕНО
+        board_id=board_id,
         action="remove_member",
-        entity_type="board",
+        entity_type="board_member",
         entity_id=board_id,
         old_values={
             "user_id": user_id,
