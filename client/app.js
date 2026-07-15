@@ -310,10 +310,6 @@ function renderAuth() {
             <button type="button" class="${!isLogin ? "is-active" : ""}" data-action="auth-mode" data-mode="register">Регистрация</button>
           </div>
           <div class="form-grid">
-            <label class="field">
-              <span>API</span>
-              <input class="input" name="apiBase" value="${escapeHtml(state.apiBase)}" placeholder="http://127.0.0.1:8000" />
-            </label>
             ${
               isLogin
                 ? ""
